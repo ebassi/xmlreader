@@ -49,7 +49,10 @@ struct _XmlReaderPrivate
   XmlReaderError last_error;
 
   xmlDocPtr current_doc;
+
+  xmlNodePtr parent;
   xmlNodePtr cursor;
+
   xmlChar *cursor_value;
 };
 
@@ -197,7 +200,7 @@ xml_reader_load_from_file (XmlReader    *reader,
 {
   XmlReaderPrivate *priv;
   GError *internal_error;
-  gchar *contents;
+  gchar *buffer;
   gboolean retval;
 
   g_return_val_if_fail (XML_IS_READER (reader), FALSE);
@@ -208,7 +211,7 @@ xml_reader_load_from_file (XmlReader    *reader,
   internal_error = NULL;
   if (!g_file_get_contents (filename, &buffer, NULL, &internal_error))
     {
-      g_propagate_error (error, &internal_error);
+      g_propagate_error (error, internal_error);
       return FALSE;
     }
 
@@ -219,7 +222,7 @@ xml_reader_load_from_file (XmlReader    *reader,
 
   retval = xml_reader_load_from_data (reader, buffer, &internal_error);
   if (!retval)
-    g_propagate_error (error, &internal_error);
+    g_propagate_error (error, internal_error);
 
   g_free (buffer);
 
@@ -332,7 +335,7 @@ xml_reader_read_start_element (XmlReader   *reader,
     }
 
   priv->error_state = TRUE;
-  priv->last_error = XML_READER_ERROR_NOT_FOUND;
+  priv->last_error = XML_READER_ERROR_UNKNOWN_NODE;
 
   return FALSE;
 }

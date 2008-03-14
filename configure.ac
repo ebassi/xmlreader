@@ -17,8 +17,8 @@ m4_define([glib_req_version], [2.15])
 m4_define([xml_req_version], [2.6.30])
 
 AC_PREREQ([2.59])
-AC_INIT([xmlr-glib], [xmlr_version], [], [xmlr-glib])
-AC_CONFIG_SRCDIR([xmlr-glib/xmlr-glib.h])
+AC_INIT([xml-reader], [xmlr_version], [], [xml-reader])
+AC_CONFIG_SRCDIR([xml-reader/xml-reader.h])
 
 AM_INIT_AUTOMAKE([1.9])
 AM_CONFIG_HEADER([config.h])
@@ -99,11 +99,10 @@ AC_CONFIG_FILES([
         Makefile
         xml-reader/Makefile
         xml-reader/tests/Makefile
-        tests/Makefile
         doc/Makefile
         doc/reference/Makefile
         doc/reference/version.xml
-        xml-reader-1.0.pc
+        xml-reader.pc
 ])
 
 AC_OUTPUT

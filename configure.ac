@@ -14,6 +14,7 @@ m4_define([lt_revision], [xmlr_interface_age])
 m4_define([lt_age], [m4_eval(xmlr_binary_age - xmlr_interface_age)])
 
 m4_define([glib_req_version], [2.15])
+m4_define([xml_req_version], [2.6.30])
 
 AC_PREREQ([2.59])
 AC_INIT([xmlr-glib], [xmlr_version], [], [xmlr-glib])
@@ -49,7 +50,9 @@ AC_C_CONST
 AC_FUNC_MALLOC
 AC_FUNC_MMAP
 
-PKG_CHECK_MODULES(XMLR, gobject-2.0 >= glib_req_version)
+PKG_CHECK_MODULES(XMLR,
+                  gobject-2.0 >= glib_req_version dnl
+                  libxml-2.0 >= xml_req_version)
 
 dnl = Enable debug level ===================================================
 

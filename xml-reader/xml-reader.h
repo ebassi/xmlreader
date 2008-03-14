@@ -1,7 +1,19 @@
-/* xml-reader.h: XML cursor-based API
+/* xml-reader.h: Cursor based XML reader API
  *
  * Copyright (C) 2008  Emmanuele Bassi  <ebassi@gnome.org>
  *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * Author:
+ *   Emmanuele Bassi  <ebassi@gnome.org>
  */
 
 #ifndef __XML_READER_H__
@@ -29,6 +41,7 @@ G_BEGIN_DECLS
  * XmlReaderError:
  * @XML_READER_ERROR_INVALID:
  * @XML_READER_ERROR_UNKNOWN_NODE:
+ * @XML_READER_ERROR_NOT_FOUND:
  *
  * #XmlReader error enumeration.
  */
@@ -73,12 +86,11 @@ GType                 xml_reader_get_type            (void) G_GNUC_CONST;
 XmlReader *           xml_reader_new                 (void);
 gboolean              xml_reader_load_from_data      (XmlReader    *reader,
                                                       const gchar  *buffer,
-                                                      gssize        length,
                                                       GError      **error);
 gboolean              xml_reader_load_from_file      (XmlReader    *reader,
                                                       const gchar  *filename,
                                                       GError      **error);
-gboolean              xml_reader_get_state           (XmlReader    *reader,
+gboolean              xml_reader_get_error           (XmlReader    *reader,
                                                       GError      **error);
 
 gboolean              xml_reader_read_start_element  (XmlReader    *reader,

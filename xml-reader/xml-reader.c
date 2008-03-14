@@ -452,3 +452,9 @@ xml_reader_get_attribute_value (XmlReader *reader)
   G_UNIMPLEMENTED;
   return NULL;
 }
+
+GQuark
+xml_reader_error_quark (void)
+{
+  return g_quark_from_static_string ("xml-reader-error-quark");
+}

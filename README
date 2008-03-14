@@ -1,0 +1,30 @@
+XmlReader - Cursor based XML reader API
+
+XmlReader is a XML reader library using a cursor based API based on
+the equivalent API available in high level language frameworks like
+.Net or Java.
+
+XmlReader uses the GObject C library to provide object orientation
+on top of the C programming language.
+
+XmlReader aims at being a easy to use, predictable and low footprint
+API for iterating and extracting data from a XML data stream coming
+from files or memory buffers.
+
+XmlReader is cursor based: the main object maintains an internal state
+about the current position in the XML document object model loaded
+by libxml-2.0; data is extracted from the XML data stream by advancing
+the internal cursor and asking for the value of an XML node as referenced
+by its name.
+
+Requirements:
+------------
+XmlReader depends on:
+* gobject-2.0 >= 2.16
+* libxml-2.0 >= 2.6.30
+
+Copyright and License
+------------
+Copyright (C) 2008 Emmanuele Bassi <ebassi@gnome.org>
+XmlReader is released under the terms of the GNU Lesser General Public
+License version 2.1 or later. See the file COPYING for details.

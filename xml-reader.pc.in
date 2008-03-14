@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: XmlReader
+Description: XmlReader implementation for GLib
+Version: @VERSION@
+Libs: -L${libdir} -lxml-reader-1.0
+Cflags: -I${includedir}/xml-reader-1.0
+Requires: libxml-2.0 gobject-2.0

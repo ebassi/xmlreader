@@ -1,0 +1,43 @@
+XMLReader
+
+# empty constructor. bindings require an empty state, or a filename/buffer
+# property, which makes passing errors and building exceptions impossible.
+XmlReader* xml_reader_new (void);
+
+# build the DOM tree; load_from_file() is actually a wrapper around
+# load_from_data().
+gboolean   xml_reader_load_from_file (XmlReader    *reader,
+                                      const gchar  *filename,
+                                      GError      **error);
+gboolean   xml_reader_load_from_data (XmlReader    *reader,
+                                      const gchar  *data,
+                                      gsszie        length,
+                                      GError      **error);
+
+# cursor API: move the current private cursor to the first element
+# called "element_name".
+gboolean   xml_reader_read_start_element   (XmlReader    *reader,
+                                            const gchar  *element_name);
+
+# invalidate the current cursor, and move to the node after the
+# previous element
+gboolean   xml_reader_read_end_element     (XmlReader    *reader);
+
+# element accessors: get the current element's name and its payload as
+# a string buffer; if the element contains nodes and not text, do we
+# build up a buffer with the subnodes and return it, or just return NULL?
+G_CONST_RETURN gchar *xml_reader_get_element_name (XmlReader *reader);
+G_CONST_RETURN gchar *xml_reader_get_element_value (XmlReader *reader);
+
+# attributes accessors API: query attributes existence and number
+gboolean   xml_reader_has_attributes       (XmlReader    *reader);
+gint       xml_reader_count_attributes     (XmlReader    *reader);
+
+# attributes cursor: move to the attribute using its name or index
+gboolean xml_reader_read_attribute_pos  (XmlReader    *reader,
+                                         gint          index_);
+gboolean xml_reader_read_attribute_name (XmlReader    *reader,
+                                         const gchar  *attribute_name);
+
+# attributes accessor: returns the payload of the current attribute
+G_CONST_RETURN gchar *xml_reader_get_attribute_value (XmlReader *reader);

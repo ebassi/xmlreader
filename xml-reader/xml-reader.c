@@ -36,7 +36,7 @@
         g_warning ("%s: Function not implemented", G_STRLOC);   \
                                                 } G_STMT_END
 
-#define XML_TO_CHAR(s)  ((gchar *) (s))
+#define XML_TO_CHAR(s)  ((char *) (s))
 
 G_DEFINE_TYPE (XmlReader, xml_reader, G_TYPE_OBJECT);
 
@@ -47,6 +47,8 @@ struct _XmlReaderPrivate
 
   guint error_state : 1;
   XmlReaderError last_error;
+
+  gint depth;
 
   xmlDocPtr current_doc;
 
@@ -62,7 +64,10 @@ xml_reader_clear (XmlReader *reader)
   XmlReaderPrivate *priv = reader->priv;
 
   if (priv->cursor_value)
-    xmlFree (priv->cursor_value);
+    {
+      xmlFree (priv->cursor_value);
+      priv->cursor_value = NULL;
+    }
 
   if (priv->current_doc)
     xmlFreeDoc (priv->current_doc);
@@ -102,6 +107,9 @@ xml_reader_init (XmlReader *reader)
 
   priv->is_filename = FALSE;
   priv->filename = NULL;
+
+  priv->cursor = NULL;
+  priv->cursor_value = NULL;
 }
 
 /*
@@ -155,7 +163,11 @@ xml_reader_load_from_data (XmlReader    *reader,
 
   xml_reader_clear (reader);
 
-  priv->current_doc = xmlParseMemory (buffer, strlen (buffer));
+  LIBXML_TEST_VERSION;
+
+  priv->current_doc = xmlReadMemory (buffer, strlen (buffer),
+                                     NULL, NULL,
+                                     XML_PARSE_RECOVER | XML_PARSE_NOBLANKS | XML_PARSE_COMPACT);
   if (!priv->current_doc)
     {
       gchar *error_message;
@@ -175,7 +187,9 @@ xml_reader_load_from_data (XmlReader    *reader,
       return FALSE;
     }
 
-  priv->cursor = priv->current_doc->xmlRootNode;
+  priv->parent = priv->current_doc->xmlRootNode;
+  priv->cursor = NULL;
+  priv->depth = 0;
 
   return TRUE;
 }
@@ -296,7 +310,7 @@ xml_reader_read_start_element (XmlReader   *reader,
                                const gchar *element_name)
 {
   XmlReaderPrivate *priv;
-  xmlNodePtr node;
+  xmlNodePtr cursor, node;
 
   g_return_val_if_fail (XML_IS_READER (reader), FALSE);
   g_return_val_if_fail (element_name != NULL, FALSE);
@@ -306,29 +320,35 @@ xml_reader_read_start_element (XmlReader   *reader,
 
   priv = reader->priv;
 
-  /* no current node; this either means that the document is empty
-   * or that we pushed once too far
-   */
-  if (!priv->cursor && !priv->error_state)
-    {
-      priv->error_state = TRUE;
-      priv->last_error = XML_READER_ERROR_UNKNOWN_NODE;
+  cursor = priv->cursor;
+  if (!cursor)
+    cursor = priv->current_doc->xmlRootNode;
+  else
+    cursor = cursor->xmlChildrenNode;
 
-      return FALSE;
-    }
-
-  if (priv->cursor_value)
-    xmlFree (priv->cursor_value);
-
-  for (node = priv->cursor->xmlChildrenNode;
+  for (node = cursor;
        node != NULL;
        node = node->next)
     {
       if (node->type == XML_ELEMENT_NODE &&
+          node->name != NULL &&
           strcmp (XML_TO_CHAR (node->name), element_name) == 0)
         {
+          xmlNodePtr child;
+
           priv->parent = priv->cursor;
           priv->cursor = node;
+          priv->depth += 1;
+
+          /* preload the text, if any */
+          child = priv->cursor->xmlChildrenNode;
+          if (child && xmlNodeIsText (child))
+            {
+              if (priv->cursor_value)
+                xmlFree (priv->cursor_value);
+
+              priv->cursor_value = xmlNodeGetContent (child);
+            }
 
           return TRUE;
         }
@@ -359,10 +379,15 @@ xml_reader_read_end_element (XmlReader *reader)
     return;
 
   if (priv->cursor_value)
-    xmlFree (priv->cursor_value);
+    {
+      xmlFree (priv->cursor_value);
+      priv->cursor_value = NULL;
+    }
+
+  priv->depth -= 1;
 
   priv->cursor = priv->parent;
-  if (!priv->parent)
+  if (!priv->cursor)
     priv->cursor = priv->current_doc->xmlRootNode;
 }
 
@@ -384,7 +409,7 @@ xml_reader_get_element_name (XmlReader *reader)
 
   priv = reader->priv;
 
-  if (G_LIKELY (priv->cursor))
+  if (priv->cursor)
     return XML_TO_CHAR (priv->cursor->name);
 
   return NULL;
@@ -406,12 +431,13 @@ xml_reader_get_element_value (XmlReader *reader)
 
   g_return_val_if_fail (XML_IS_READER (reader), NULL);
 
-  if (G_LIKELY (priv->cursor))
-    {
-      priv->cursor_value = xmlNodeGetContent (priv->cursor);
+  priv = reader->priv;
 
-      return XML_TO_CHAR (priv->cursor_value);
-    }
+  if (xml_reader_get_error (reader, NULL))
+    return NULL;
+
+  if (priv->cursor_value)
+    return XML_TO_CHAR (priv->cursor_value);
 
   return NULL;
 }

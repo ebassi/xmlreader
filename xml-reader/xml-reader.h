@@ -41,13 +41,14 @@ G_BEGIN_DECLS
  * XmlReaderError:
  * @XML_READER_ERROR_INVALID:
  * @XML_READER_ERROR_UNKNOWN_NODE:
- * @XML_READER_ERROR_NOT_FOUND:
+ * @XML_READER_ERROR_EMPTY_FILE:
  *
  * #XmlReader error enumeration.
  */
 typedef enum {
   XML_READER_ERROR_INVALID,
-  XML_READER_ERROR_UNKNOWN_NODE
+  XML_READER_ERROR_UNKNOWN_NODE,
+  XML_READER_ERROR_EMPTY_FILE
 } XmlReaderError;
 
 GQuark xml_reader_error_quark (void);

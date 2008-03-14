@@ -10,9 +10,10 @@
 #include <xml-reader/xml-reader.h>
 
 static const gchar *xml_test =
-"<book-info>\n"
-"  <author>Doe, John</author>\n"
-"  <title>An XML test</title>\n"
+"<?xml version=\"1.0\"?>"
+"<book-info>"
+  "<author>Doe, John</author>"
+  "<title>An XML Test</title>"
 "</book-info>";
 
 static void

@@ -65,9 +65,11 @@ test_invalid_walk (void)
   g_assert_cmpint (xml_reader_get_error (reader, &error), ==, TRUE);
   g_assert_cmpint (error->domain, ==, XML_READER_ERROR);
   g_assert_cmpint (error->code, ==, XML_READER_ERROR_UNKNOWN_NODE);
-  g_assert_cmpstr (xml_reader_get_element_name (reader), ==, "book-info");
+  g_assert (xml_reader_get_element_name (reader) == NULL);
 
   xml_reader_read_end_element (reader);
+
+  g_assert_cmpstr (xml_reader_get_element_name (reader), ==, "book-info");
 
   g_error_free (error);
   g_object_unref (reader);

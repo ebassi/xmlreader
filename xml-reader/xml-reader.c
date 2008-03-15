@@ -383,6 +383,11 @@ xml_reader_read_start_element (XmlReader   *reader,
 
   priv->error_state = TRUE;
   priv->last_error = XML_READER_ERROR_UNKNOWN_NODE;
+  priv->parent = priv->node_cursor;
+  if (!priv->parent)
+    priv->parent = priv->current_doc->xmlRootNode;
+  priv->node_cursor = NULL;
+  priv->attr_cursor = NULL;
 
   return FALSE;
 }
@@ -401,6 +406,23 @@ xml_reader_read_end_element (XmlReader *reader)
   g_return_if_fail (XML_IS_READER (reader));
 
   priv = reader->priv;
+
+  /* if we are in error state, end-element will unset the
+   * error state
+   */
+  if (xml_reader_get_error (reader, NULL))
+    {
+      priv->error_state = FALSE;
+      priv->node_cursor = priv->parent;
+      if (!priv->node_cursor)
+        {
+          priv->node_cursor = priv->current_doc->xmlRootNode;
+          priv->parent = NULL;
+        }
+      else
+        priv->parent = priv->node_cursor->parent;
+      return;
+    }
 
   if (!priv->node_cursor)
     {
@@ -448,6 +470,9 @@ xml_reader_get_element_name (XmlReader *reader)
   g_return_val_if_fail (XML_IS_READER (reader), NULL);
 
   priv = reader->priv;
+
+  if (xml_reader_get_error (reader, NULL))
+    return NULL;
 
   if (priv->node_cursor)
     return XML_TO_CHAR (priv->node_cursor->name);

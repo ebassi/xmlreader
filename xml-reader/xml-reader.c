@@ -53,9 +53,11 @@ struct _XmlReaderPrivate
   xmlDocPtr current_doc;
 
   xmlNodePtr parent;
-  xmlNodePtr cursor;
+  xmlNodePtr node_cursor;
+  xmlAttrPtr attr_cursor;
 
   xmlChar *cursor_value;
+  xmlChar *attr_value;
 };
 
 static inline void
@@ -67,6 +69,12 @@ xml_reader_clear (XmlReader *reader)
     {
       xmlFree (priv->cursor_value);
       priv->cursor_value = NULL;
+    }
+
+  if (priv->attr_value)
+    {
+      xmlFree (priv->attr_value);
+      priv->attr_value = NULL;
     }
 
   if (priv->current_doc)
@@ -108,8 +116,10 @@ xml_reader_init (XmlReader *reader)
   priv->is_filename = FALSE;
   priv->filename = NULL;
 
-  priv->cursor = NULL;
+  priv->node_cursor = NULL;
+  priv->attr_cursor = NULL;
   priv->cursor_value = NULL;
+  priv->attr_value = NULL;
 }
 
 /*
@@ -188,7 +198,8 @@ xml_reader_load_from_data (XmlReader    *reader,
     }
 
   priv->parent = priv->current_doc->xmlRootNode;
-  priv->cursor = NULL;
+  priv->node_cursor = NULL;
+  priv->attr_cursor = NULL;
   priv->depth = 0;
 
   return TRUE;
@@ -320,7 +331,7 @@ xml_reader_read_start_element (XmlReader   *reader,
 
   priv = reader->priv;
 
-  cursor = priv->cursor;
+  cursor = priv->node_cursor;
   if (!cursor)
     cursor = priv->current_doc->xmlRootNode;
   else
@@ -336,18 +347,26 @@ xml_reader_read_start_element (XmlReader   *reader,
         {
           xmlNodePtr child;
 
-          priv->parent = priv->cursor;
-          priv->cursor = node;
+          priv->parent = priv->node_cursor;
+          priv->node_cursor = node;
           priv->depth += 1;
 
           /* preload the text, if any */
-          child = priv->cursor->xmlChildrenNode;
+          child = priv->node_cursor->xmlChildrenNode;
           if (child && xmlNodeIsText (child))
             {
               if (priv->cursor_value)
                 xmlFree (priv->cursor_value);
 
               priv->cursor_value = xmlNodeGetContent (child);
+            }
+
+          /* unset the attributes cache */
+          priv->attr_cursor = priv->node_cursor->properties;
+          if (priv->attr_value)
+            {
+              xmlFree (priv->attr_value);
+              priv->attr_value = NULL;
             }
 
           return TRUE;
@@ -375,8 +394,11 @@ xml_reader_read_end_element (XmlReader *reader)
 
   priv = reader->priv;
 
-  if (!priv->cursor)
-    return;
+  if (!priv->node_cursor)
+    {
+      g_warning ("No cursor set");
+      return;
+    }
 
   if (priv->cursor_value)
     {
@@ -384,11 +406,21 @@ xml_reader_read_end_element (XmlReader *reader)
       priv->cursor_value = NULL;
     }
 
+  if (priv->attr_value)
+    {
+      xmlFree (priv->attr_value);
+      priv->attr_value = NULL;
+    }
+
   priv->depth -= 1;
 
-  priv->cursor = priv->parent;
-  if (!priv->cursor)
-    priv->cursor = priv->current_doc->xmlRootNode;
+  priv->node_cursor = priv->parent;
+  priv->parent = priv->parent ? priv->parent->parent : NULL;
+
+  if (!priv->node_cursor)
+    priv->node_cursor = priv->current_doc->xmlRootNode;
+
+  priv->attr_cursor = NULL;
 }
 
 /**
@@ -409,8 +441,8 @@ xml_reader_get_element_name (XmlReader *reader)
 
   priv = reader->priv;
 
-  if (priv->cursor)
-    return XML_TO_CHAR (priv->cursor->name);
+  if (priv->node_cursor)
+    return XML_TO_CHAR (priv->node_cursor->name);
 
   return NULL;
 }
@@ -442,41 +474,179 @@ xml_reader_get_element_value (XmlReader *reader)
   return NULL;
 }
 
+/**
+ * xml_reader_has_attributes:
+ * @reader: a #XmlReader
+ *
+ * Gets whether the current element has attributes or not.
+ *
+ * Return value: %TRUE if the element has attributes
+ */
 gboolean
 xml_reader_has_attributes (XmlReader *reader)
 {
-  G_UNIMPLEMENTED;
-  return FALSE;
+  XmlReaderPrivate *priv;
+
+  g_return_val_if_fail (XML_IS_READER (reader), FALSE);
+
+  if (xml_reader_get_error (reader, NULL))
+    return FALSE;
+
+  priv = reader->priv;
+
+  if (!priv->node_cursor)
+    {
+      g_warning ("No cursor set");
+      return FALSE;
+    }
+
+  return priv->node_cursor->properties != NULL;
 }
 
+/**
+ * xml_reader_count_attributes:
+ * @reader: a #XmlReader
+ *
+ * Counts the attributes on the current element.
+ *
+ * Return value: the number of elements, or -1 on failure
+ */
 gint
 xml_reader_count_attributes (XmlReader *reader)
 {
-  G_UNIMPLEMENTED;
-  return FALSE;
+  XmlReaderPrivate *priv;
+  xmlAttrPtr attr;
+  gint count;
+
+  g_return_val_if_fail (XML_IS_READER (reader), -1);
+
+  if (xml_reader_get_error (reader, NULL))
+    return -1;
+
+  priv = reader->priv;
+
+  if (!priv->node_cursor)
+    return -1;
+
+  if (!xml_reader_has_attributes (reader))
+    return 0;
+
+  count = 0;
+  for (attr = priv->node_cursor->properties; attr != NULL; attr = attr->next)
+    count += 1;
+
+  return count;
 }
 
+/**
+ * xml_reader_read_attribute_pos:
+ * @reader: a #XmlReader
+ * @index_: the index of the attribute, starting from 0
+ *
+ * Moves the internal cursor to the attribute at @index_ of the current
+ * element inside the XML document object model.
+ *
+ * Return value: %TRUE if the attribute was found
+ */
 gboolean
 xml_reader_read_attribute_pos (XmlReader *reader,
                                gint       index_)
 {
-  G_UNIMPLEMENTED;
+  XmlReaderPrivate *priv;
+  xmlAttrPtr attr;
+  gint i;
+
+  g_return_val_if_fail (XML_IS_READER (reader), FALSE);
+
+  if (xml_reader_get_error (reader, NULL))
+    return FALSE;
+
+  priv = reader->priv;
+
+  if (!priv->node_cursor)
+    return FALSE;
+
+  if (!xml_reader_has_attributes (reader))
+    return FALSE;
+
+  for (attr = priv->node_cursor->properties, i = 0;
+       attr != NULL;
+       attr = attr->next, i++)
+    {
+      if (i == index_)
+        {
+          priv->attr_cursor = attr;
+          priv->attr_value = xmlGetProp (priv->node_cursor, attr->name);
+
+          return TRUE;
+        }
+    }
+
   return FALSE;
 }
 
+/**
+ * xml_reader_read_attribute_name:
+ * @reader: a #XmlReader
+ * @attribute_name: the name of the attribute to read
+ *
+ * Moves the internal cursor to the @attribute_name of the current
+ * element inside the XML document object model.
+ *
+ * Return value: %TRUE if the attribute was found
+ */
 gboolean
 xml_reader_read_attribute_name (XmlReader   *reader,
                                 const gchar *attribute_name)
 {
-  G_UNIMPLEMENTED;
+  XmlReaderPrivate *priv;
+  xmlAttrPtr attr;
+
+  g_return_val_if_fail (XML_IS_READER (reader), FALSE);
+  g_return_val_if_fail (attribute_name != NULL, FALSE);
+
+  priv = reader->priv;
+
+  if (!priv->node_cursor)
+    return FALSE;
+
+  if (!xml_reader_has_attributes (reader))
+    return FALSE;
+
+  for (attr = priv->node_cursor->properties;
+       attr != NULL;
+       attr = attr->next)
+    {
+      if (strcmp (XML_TO_CHAR (attr->name), attribute_name) == 0)
+        {
+          priv->attr_cursor = attr;
+          priv->attr_value = xmlGetProp (priv->node_cursor, attr->name);
+
+          return TRUE;
+        }
+    }
+
   return FALSE;
 }
 
+/**
+ * xml_reader_get_attribute_value:
+ * @reader: a #XmlReader
+ *
+ * Retrieves the value of the currently read attribute.
+ *
+ * Return value: the content of the attribute, or %NULL
+ */
 G_CONST_RETURN gchar *
 xml_reader_get_attribute_value (XmlReader *reader)
 {
-  G_UNIMPLEMENTED;
-  return NULL;
+  XmlReaderPrivate *priv;
+
+  g_return_val_if_fail (XML_IS_READER (reader), NULL);
+
+  priv = reader->priv;
+
+  return XML_TO_CHAR (priv->attr_value);
 }
 
 GQuark

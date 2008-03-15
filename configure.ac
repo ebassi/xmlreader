@@ -81,7 +81,7 @@ dnl = Enable strict compiler flags =========================================
 
 # use strict compiler flags only on development releases
 m4_define([maintainer_flags_default],
-          m4_if(m4_eval(xmlr_minor_version % 2), [1], [yes], [no]))
+          m4_if(m4_eval(xmlr_minor_version % 2), [0], [no], [yes]))
 AC_ARG_ENABLE([maintainer-flags],
               AC_HELP_STRING([--enable-maintainer-flags=@<:@no/yes@:>@],
                              [Use strict compiler flags @<:@default=maintainer_flags_default@:>@]),,

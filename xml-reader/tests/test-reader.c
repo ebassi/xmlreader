@@ -9,11 +9,18 @@
 
 #include <xml-reader/xml-reader.h>
 
-static const gchar *xml_test =
+static const gchar *xml_simple_test =
 "<?xml version=\"1.0\"?>"
 "<book-info>"
   "<author>Doe, John</author>"
   "<title>An XML Test</title>"
+"</book-info>";
+
+static const gchar *xml_attr_test =
+"<?xml version=\"1.0\"?>"
+"<book-info>"
+  "<author role=\"primary\">Doe, John</author>"
+  "<author role=\"secondary\">Q. John</author>"
 "</book-info>";
 
 static void
@@ -21,7 +28,7 @@ test_walk (void)
 {
   XmlReader *reader = xml_reader_new ();
 
-  g_assert (xml_reader_load_from_data (reader, xml_test, NULL) != FALSE);
+  g_assert (xml_reader_load_from_data (reader, xml_simple_test, NULL) != FALSE);
 
   g_assert (xml_reader_read_start_element (reader, "book-info") != FALSE);
   g_assert (xml_reader_read_start_element (reader, "author") != FALSE);
@@ -45,6 +52,30 @@ test_walk (void)
   g_object_unref (reader);
 }
 
+static void
+test_attributes (void)
+{
+  XmlReader *reader = xml_reader_new ();
+
+  g_assert (xml_reader_load_from_data (reader, xml_attr_test, NULL) != FALSE);
+
+  g_assert (xml_reader_read_start_element (reader, "book-info") != FALSE);
+  g_assert (xml_reader_read_start_element (reader, "author") != FALSE);
+
+  g_assert_cmpstr (xml_reader_get_element_name (reader), ==, "author");
+  g_assert_cmpstr (xml_reader_get_element_value (reader), ==, "Doe, John");
+
+  g_assert_cmpint (xml_reader_has_attributes (reader), ==, TRUE);
+  g_assert_cmpint (xml_reader_count_attributes (reader), ==, 1);
+  g_assert_cmpint (xml_reader_read_attribute_name (reader, "role"), ==, TRUE);
+  g_assert_cmpstr (xml_reader_get_attribute_value (reader), ==, "primary");
+
+  xml_reader_read_end_element (reader);
+  xml_reader_read_end_element (reader);
+
+  g_object_unref (reader);
+}
+
 int
 main (int   argc,
       char *argv[])
@@ -53,6 +84,7 @@ main (int   argc,
   g_test_init (&argc, &argv, NULL);
 
   g_test_add_func ("/xml-reader/walk", test_walk);
+  g_test_add_func ("/xml-reader/attributes", test_attributes);
 
   return g_test_run ();
 }

@@ -39,9 +39,9 @@ G_BEGIN_DECLS
 
 /**
  * XmlReaderError:
- * @XML_READER_ERROR_INVALID:
- * @XML_READER_ERROR_UNKNOWN_NODE:
- * @XML_READER_ERROR_EMPTY_FILE:
+ * @XML_READER_ERROR_INVALID: Invalid XML
+ * @XML_READER_ERROR_UNKNOWN_NODE: The requested node was not found
+ * @XML_READER_ERROR_EMPTY_FILE: The parsed file was empty
  *
  * #XmlReader error enumeration.
  */

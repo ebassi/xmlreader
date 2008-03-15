@@ -16,6 +16,14 @@
  *   Emmanuele Bassi  <ebassi@gnome.org>
  */
 
+/**
+ * SECTION:xml-reader
+ * @short_description: Cursor based XML reader API
+ *
+ * #XmlReader is a simple class for walking the nodes of a XML data
+ * stream by simply entering and leaving each desired node.
+ */
+
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -591,7 +599,30 @@ xml_reader_read_attribute_pos (XmlReader *reader,
  * @attribute_name: the name of the attribute to read
  *
  * Moves the internal cursor to the @attribute_name of the current
- * element inside the XML document object model.
+ * element inside the XML document object model:
+ *
+ * |[
+ *   /&ast; inspect "node" &ast;/
+ *   xml_reader_read_start_element (reader, "node");
+ *
+ *   /&ast; inspect the node attributes &ast;/
+ *   xml_reader_read_attribute_name (reader, "role");
+ *   role = g_strdup (xml_reader_get_attribute_value (reader));
+ *   xml_reader_read_attribute_name (reader, "direction");
+ *   direction = g_strdup (xml_reader_get_attribute_value (reader));
+ *
+ *   /&ast; retrieve the node content &ast;/
+ *   node = g_strdup (xml_reader_get_element_value (reader));
+ *
+ *   xml_reader_read_end_element (reader);
+ *
+ *   g_print ("Node has role of '%s' and direction '%s': %s\n",
+ *            role, direction, node);
+ *
+ *   g_free (role);
+ *   g_free (direction);
+ *   g_free (node);
+ * ]|
  *
  * Return value: %TRUE if the attribute was found
  */
